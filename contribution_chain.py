@@ -1,104 +1,69 @@
 # سجل مساهمات المشروع الجماعي
-# كل عضو بالقروب يسجل الجزء اللي سلمه والسجل يكون بلوكات مربوطة ببعض
-# عشان محد يقدر يغير او ياخذ شغل غيره بعدين
+# كل عضو يسجل الجزء اللي سلمه وكل بلوك مربوط باللي قبله
 
 import hashlib
-import json
 from datetime import datetime
 
 
-def sha256(text):
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
 class Block:
-    def __init__(self, index, member, task, work_hash, previous_hash):
+    def __init__(self, index, member, task, previous_hash):
         self.index = index
-        self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.time = str(datetime.now())
         self.member = member
         self.task = task
-        self.work_hash = work_hash  # هاش الملف مو الملف نفسه
         self.previous_hash = previous_hash
-        self.hash = self.calculate_hash()
+        self.hash = self.get_hash()
 
-    def calculate_hash(self):
-        data = {
-            "index": self.index,
-            "timestamp": self.timestamp,
-            "member": self.member,
-            "task": self.task,
-            "work_hash": self.work_hash,
-            "previous_hash": self.previous_hash,
-        }
-        return sha256(json.dumps(data, sort_keys=True))
+    def get_hash(self):
+        data = str(self.index) + self.time + self.member + self.task + self.previous_hash
+        return hashlib.sha256(data.encode()).hexdigest()
 
 
-class ContributionChain:
-    def __init__(self, project_name):
-        self.project_name = project_name
-        self.chain = [Block(0, "system", "project created: " + project_name, "-", "0")]
+class Chain:
+    def __init__(self):
+        # اول بلوك
+        self.blocks = [Block(0, "start", "project created", "0")]
 
-    def add_contribution(self, member, task, work_content):
-        last = self.chain[-1]
-        block = Block(len(self.chain), member, task, sha256(work_content), last.hash)
-        self.chain.append(block)
-        return block
+    def add(self, member, task):
+        last = self.blocks[-1]
+        self.blocks.append(Block(len(self.blocks), member, task, last.hash))
 
     def is_valid(self):
-        for i in range(1, len(self.chain)):
-            current = self.chain[i]
-            previous = self.chain[i - 1]
+        for i in range(1, len(self.blocks)):
+            block = self.blocks[i]
+            before = self.blocks[i - 1]
 
-            if current.hash != current.calculate_hash():
-                return False, f"block {i} was modified (its hash doesn't match its data)"
-            if current.previous_hash != previous.hash:
-                return False, f"block {i} is no longer linked to block {i - 1}"
-        return True, "chain is valid"
+            # اذا البيانات تغيرت الهاش ما يطابق
+            if block.hash != block.get_hash():
+                print("block", i, "was changed")
+                return False
 
-    def verify_file(self, block_index, work_content):
-        # الدكتور يتاكد ان الملف اللي عنده هو نفسه اللي انسجل
-        return self.chain[block_index].work_hash == sha256(work_content)
+            # اذا الربط انكسر مع اللي قبله
+            if block.previous_hash != before.hash:
+                print("block", i, "is not linked to block", i - 1)
+                return False
 
-    def summary(self):
-        counts = {}
-        for block in self.chain[1:]:
-            counts[block.member] = counts.get(block.member, 0) + 1
-        return counts
-
-    def print_chain(self):
-        for b in self.chain:
-            print(f"[{b.index}] {b.timestamp} | {b.member:<8} | {b.task}")
-            print(f"     prev: {b.previous_hash[:16]}...  hash: {b.hash[:16]}...")
+        print("chain is valid")
+        return True
 
 
-def check(chain):
-    ok, msg = chain.is_valid()
-    print(("OK  -> " if ok else "TAMPERING DETECTED -> ") + msg)
+project = Chain()
+project.add("Turki", "introduction")
+project.add("Sara", "slides")
+project.add("Faisal", "references")
+project.add("Turki", "code")
 
+for b in project.blocks:
+    print(b.index, b.member, b.task, b.hash[:10])
 
-if __name__ == "__main__":
-    project = ContributionChain("CS-HCI Group 4")
+project.is_valid()
 
-    project.add_contribution("Turki", "wrote the introduction", "Introduction text v1 ...")
-    project.add_contribution("Sara", "designed the slides", "slides.pptx content ...")
-    project.add_contribution("Faisal", "added references", "references list ...")
-    project.add_contribution("Turki", "built the prototype", "prototype source code ...")
+# تلاعب: فيصل يحط اسمه على السلايدات
+print("\nFaisal changes the slides to his name")
+project.blocks[2].member = "Faisal"
+project.is_valid()
 
-    print("=== Contribution log ===")
-    project.print_chain()
-    print()
-    check(project)
-    print("Contributions per member:", project.summary())
-
-    # الدكتور يتحقق من ملف السلايدات
-    print("Slides file matches record?", project.verify_file(2, "slides.pptx content ..."))
-
-    # تلاعب 1 فيصل يغير اسم صاحب السلايدات لاسمه
-    print("\n=== Tamper attempt 1: Faisal changes block 2 to his name ===")
-    project.chain[2].member = "Faisal"
-    check(project)
-
-    # تلاعب 2 يعيد حساب الهاش عشان يخفي التعديل
-    print("\n=== Tamper attempt 2: he also recalculates block 2's hash ===")
-    project.chain[2].hash = project.chain[2].calculate_hash()
-    check(project)
+# يحاول يخفي التعديل ويعيد حساب الهاش
+print("\nhe recalculates the hash")
+project.blocks[2].hash = project.blocks[2].get_hash()
+project.is_valid()
