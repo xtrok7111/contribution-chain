@@ -1,8 +1,6 @@
-"""
-سجل مساهمات المشروع الجماعي - نموذج أولي
-كل عضو بالقروب يسجل الجزء اللي سلّمه، والسجل يكون سلسلة كتل
-عشان محد يقدر يغيّر أو ينسب شغل غيره لنفسه بعدين.
-"""
+# سجل مساهمات المشروع الجماعي
+# كل عضو بالقروب يسجل الجزء اللي سلمه والسجل يكون بلوكات مربوطة ببعض
+# عشان محد يقدر يغير او ياخذ شغل غيره بعدين
 
 import hashlib
 import json
@@ -19,7 +17,7 @@ class Block:
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.member = member
         self.task = task
-        self.work_hash = work_hash  # بصمة الملف المسلّم مو الملف نفسه
+        self.work_hash = work_hash  # هاش الملف مو الملف نفسه
         self.previous_hash = previous_hash
         self.hash = self.calculate_hash()
 
@@ -58,7 +56,7 @@ class ContributionChain:
         return True, "chain is valid"
 
     def verify_file(self, block_index, work_content):
-        # الدكتور يتأكد إن الملف اللي عنده هو نفس اللي انسجل
+        # الدكتور يتاكد ان الملف اللي عنده هو نفسه اللي انسجل
         return self.chain[block_index].work_hash == sha256(work_content)
 
     def summary(self):
@@ -95,12 +93,12 @@ if __name__ == "__main__":
     # الدكتور يتحقق من ملف السلايدات
     print("Slides file matches record?", project.verify_file(2, "slides.pptx content ..."))
 
-    # محاولة تلاعب 1: فيصل يغيّر اسم صاحب السلايدات لاسمه
+    # تلاعب 1 فيصل يغير اسم صاحب السلايدات لاسمه
     print("\n=== Tamper attempt 1: Faisal changes block 2 to his name ===")
     project.chain[2].member = "Faisal"
     check(project)
 
-    # محاولة تلاعب 2: يعيد حساب هاش الكتلة عشان يخفي التعديل
+    # تلاعب 2 يعيد حساب الهاش عشان يخفي التعديل
     print("\n=== Tamper attempt 2: he also recalculates block 2's hash ===")
     project.chain[2].hash = project.chain[2].calculate_hash()
     check(project)
