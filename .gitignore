@@ -1,0 +1,7 @@
+*.pptx
+*.jpeg
+*.jpg
+*.png
+__pycache__/
+ohda-project/
+ohda-project.zip
